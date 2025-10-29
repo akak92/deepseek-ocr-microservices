@@ -1,0 +1,65 @@
+version: "3.9"
+
+x-default-env: &default-env
+  MINIO_ENDPOINT: http://minio:9000
+  MINIO_ACCESS_KEY: ${MINIO_ACCESS_KEY}
+  MINIO_SECRET_KEY: ${MINIO_SECRET_KEY}
+  MINIO_BUCKET: ${MINIO_BUCKET}
+  REDIS_URL: redis://redis:6379/0
+
+services:
+  api:
+    build: ./services/api
+    container_name: ocr_api
+    env_file: .env
+    environment:
+      <<: *default-env
+      CELERY_BROKER_URL: redis://redis:6379/0
+      CELERY_RESULT_BACKEND: redis://redis:6379/0
+    ports:
+      - "8000:8000"
+    depends_on:
+      - redis
+      - minio
+    volumes:
+      - minio_data:/data
+
+  worker:
+    build: ./services/worker
+    container_name: ocr_worker
+    env_file: .env
+    environment:
+      <<: *default-env
+      CELERY_BROKER_URL: redis://redis:6379/0
+      CELERY_RESULT_BACKEND: redis://redis:6379/0
+    depends_on:
+      - redis
+      - minio
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - capabilities: [gpu]
+    # Para Docker Desktop más viejo, puedes usar:
+    # runtime: nvidia
+    command: ["bash", "-lc", "celery -A worker.ocr_worker worker --loglevel=INFO"]
+
+  redis:
+    image: redis:7-alpine
+    container_name: ocr_redis
+
+  minio:
+    image: quay.io/minio/minio:RELEASE.2024-12-18T13-15-44Z
+    container_name: ocr_minio
+    command: server /data --console-address ":9001"
+    environment:
+      MINIO_ROOT_USER: ${MINIO_ACCESS_KEY}
+      MINIO_ROOT_PASSWORD: ${MINIO_SECRET_KEY}
+    ports:
+      - "9000:9000"
+      - "9001:9001"
+    volumes:
+      - minio_data:/data
+
+volumes:
+  minio_data:

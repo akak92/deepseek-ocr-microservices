@@ -1,0 +1,10 @@
+# Núcleo
+torch==2.6.0+cu118 --extra-index-url https://download.pytorch.org/whl/cu118
+# vLLM con soporte DeepSeek-OCR (nightly, hasta el release >=0.11.1)
+vllm==0.11.0.dev20251023 --extra-index-url https://wheels.vllm.ai/nightly
+transformers>=4.51.1
+pillow==10.4.0
+redis==5.1.1
+celery==5.4.0
+boto3==1.35.36
+python-dotenv==1.0.1
